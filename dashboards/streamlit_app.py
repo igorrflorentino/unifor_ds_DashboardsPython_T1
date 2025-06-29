@@ -7,11 +7,7 @@ import geopandas as gpd
 
 # Carregue os dados
 df = pd.read_csv('datasets/RECLAMEAQUI_IBYTE.csv')
-
-# Converte a coluna 'TEMPO' para o tipo datetime
 df['TEMPO'] = pd.to_datetime(df['TEMPO'])
-
-# Extrai MUNICIPIO e UF da coluna LOCAL
 df[['MUNICIPIO', 'UF']] = df['LOCAL'].str.split('-', n=1, expand=True)
 df['MUNICIPIO'] = df['MUNICIPIO'].str.strip()
 df['UF'] = df['UF'].str.strip()
@@ -42,7 +38,8 @@ df_filt = df_filt[(df_filt['N_PALAVRAS'] >= min_palavras) & (df_filt['N_PALAVRAS
 # Série temporal
 st.subheader("Série Temporal do Número de Reclamações")
 serie = df_filt.groupby(df_filt['TEMPO'].dt.to_period('M')).size()
-fig1 = px.line(serie, labels={'value':'Nº Reclamações', 'TEMPO':'Data'})
+serie.index = serie.index.astype(str)
+fig1 = px.line(serie, labels={'value':'Nº Reclamações', 'index':'Data'})
 st.plotly_chart(fig1)
 
 # Frequência por estado
@@ -72,25 +69,25 @@ ax.imshow(wc, interpolation="bilinear")
 ax.axis("off")
 st.pyplot(fig5)
 
-# Mapa do Brasil com heatmap (por estado)
-st.subheader("Mapa do Brasil - Reclamações por Estado e Ano")
-ano = st.selectbox("Selecione o ano:", sorted(df_filt['TEMPO'].dt.year.unique()))
-df_ano = df_filt[df_filt['TEMPO'].dt.year == ano]
-mapa = df_ano.groupby('UF').size().reset_index(name='reclamacoes')
+# # Mapa do Brasil com heatmap (por estado)
+# st.subheader("Mapa do Brasil - Reclamações por Estado e Ano")
+# ano = st.selectbox("Selecione o ano:", sorted(df_filt['TEMPO'].dt.year.unique()))
+# df_ano = df_filt[df_filt['TEMPO'].dt.year == ano]
+# mapa = df_ano.groupby('UF').size().reset_index(name='reclamacoes')
 
-# Carregue um shapefile simplificado dos estados do Brasil (exemplo: 'br_states.geojson')
-# Você pode baixar um geojson de estados brasileiros em https://github.com/codeforamerica/click_that_hood/blob/master/public/data/brazil-states.geojson
-gdf = gpd.read_file('datasets/br_states.geojson')
-gdf = gdf.merge(mapa, left_on='sigla', right_on='UF', how='left').fillna(0)
+# # Carregue um shapefile simplificado dos estados do Brasil (exemplo: 'br_states.geojson')
+# # Você pode baixar um geojson de estados brasileiros em https://github.com/codeforamerica/click_that_hood/blob/master/public/data/brazil-states.geojson
+# gdf = gpd.read_file('datasets/brazil-states.geojson')
+# gdf = gdf.merge(mapa, left_on='sigla', right_on='UF', how='left').fillna(0)
 
-fig6 = px.choropleth(
-    gdf,
-    geojson=gdf.geometry,
-    locations=gdf.index,
-    color='reclamacoes',
-    hover_name='nome',
-    color_continuous_scale="Reds",
-    labels={'reclamacoes':'Nº Reclamações'}
-)
-fig6.update_geos(fitbounds="locations", visible=False)
-st.plotly_chart(fig6)
+# fig6 = px.choropleth(
+#     gdf,
+#     geojson=gdf.geometry,
+#     locations=gdf.index,
+#     color='reclamacoes',
+#     hover_name='nome',
+#     color_continuous_scale="Reds",
+#     labels={'reclamacoes':'Nº Reclamações'}
+# )
+# fig6.update_geos(fitbounds="locations", visible=False)
+# st.plotly_chart(fig6)
