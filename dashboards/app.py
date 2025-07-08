@@ -6,7 +6,7 @@ from wordcloud import WordCloud
 import geopandas as gpd
 
 # Carregue os dados
-df = pd.read_csv('../datasets/RECLAMEAQUI_IBYTE.csv')
+df = pd.read_csv('datasets/RECLAMEAQUI_IBYTE.csv')
 df['TEMPO'] = pd.to_datetime(df['TEMPO'])
 df[['MUNICIPIO', 'UF']] = df['LOCAL'].str.split('-', n=1, expand=True)
 df['MUNICIPIO'] = df['MUNICIPIO'].str.strip()
