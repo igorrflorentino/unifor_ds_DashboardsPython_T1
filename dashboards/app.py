@@ -120,23 +120,36 @@ df[['MUNICIPIO', 'UF']] = df['LOCAL'].str.split('-', n=1, expand=True)
 df['MUNICIPIO'] = df['MUNICIPIO'].str.strip()
 df['UF'] = df['UF'].str.strip()
 
-# --- Lista de siglas válidas do GeoJSON ---
+# --- Conversão de TEMPO para datetime ---
+df['TEMPO'] = pd.to_datetime(df['TEMPO'], errors='coerce')
+
+# --- Carrega GeoJSON ---
 with open('datasets/brazil-states.geojson', 'r') as f:
     geojson = json.load(f)
 
 ufs_geojson = [f['properties']['sigla'] for f in geojson['features']]
 
-# --- Filtragem para manter apenas UFs válidas ---
+# --- Filtra UFs válidas ---
 df = df[df['UF'].isin(ufs_geojson)]
 
-# --- Agrupamento por UF usando a coluna CASOS ---
-# Se CASOS já contém a contagem correta
-df_mapa = df[['UF', 'CASOS']].copy()
+# --- Seletor de ano ---
+anos_disponiveis = sorted(df['TEMPO'].dt.year.dropna().unique())
+ano_selecionado = st.selectbox("Selecione o ano:", anos_disponiveis)
+
+# --- Filtra pelo ano selecionado ---
+df_ano = df[df['TEMPO'].dt.year == ano_selecionado]
+
+# --- Agrupa reclamações por UF usando CASOS ---
+df_mapa = df_ano[['UF', 'CASOS']].copy()
 df_mapa = df_mapa.groupby('UF', as_index=False).sum()
 df_mapa.rename(columns={'CASOS': 'reclamacoes'}, inplace=True)
 
-# --- Conversão segura para int, removendo vírgulas se existirem ---
+# --- Conversão segura para int ---
 df_mapa['reclamacoes'] = df_mapa['reclamacoes'].replace(',', '', regex=True).astype(int)
+
+# --- Debug opcional ---
+st.subheader(f"Mapa de Reclamações - Por Estado (Ano {ano_selecionado})")
+#st.dataframe(df_mapa)
 
 # --- Geração do mapa ---
 fig_mapa = px.choropleth(
@@ -153,13 +166,10 @@ fig_mapa.update_geos(
     fitbounds="locations",
     visible=True,
     projection_type="mercator",
-    center=dict(lat=-14.2350, lon=-51.9253),  # Centro aproximado do Brasil
-    lataxis_range=[-35, 5],  # Latitude aproximada Brasil
-    lonaxis_range=[-75, -35]  # Longitude aproximada Brasil
+    center=dict(lat=-14.2350, lon=-51.9253),
+    lataxis_range=[-35, 5],
+    lonaxis_range=[-75, -35]
 )
 
-fig_mapa.update_geos(fitbounds="locations", visible=True)
-
-# --- Exibição no Streamlit ---
-st.subheader("Mapa de Reclamações - Por Estado")
+# --- Exibe no Streamlit ---
 st.plotly_chart(fig_mapa, use_container_width=True)
