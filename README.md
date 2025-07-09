@@ -30,6 +30,8 @@
 # DashboardsPython
 Este repositório contém códigos desenvolvidos para a disciplina de Dashboards em Python do MBA em Ciência de Dados
 
+[Acesse a aplicação aqui](https://dashboardspython-ulegbeppwubxo4fmj9jvyj.streamlit.app/)
+
 ## Setup
 Aplicação Streamlit com dependências gerenciadas pelo [uv](https://github.com/astral-sh/uv).
 
