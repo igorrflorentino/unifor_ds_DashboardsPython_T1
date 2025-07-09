@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import plotly.express as px
 from wordcloud import WordCloud
 import geopandas as gpd
+import json
 
 # Carregue os dados
 df = pd.read_csv('datasets/RECLAMEAQUI_IBYTE.csv')
@@ -101,43 +102,7 @@ ax.imshow(wc, interpolation="bilinear")
 ax.axis("off")
 st.pyplot(fig5)
 
-
-# Mapa do Brasil com heatmap (por estado)
-# st.subheader("Mapa do Brasil - Reclamações por Estado e Ano")
-
-# anos_disponiveis = sorted(df_filt['TEMPO'].dt.year.dropna().unique())
-# if anos_disponiveis:
-#     ano = st.selectbox("Selecione o ano:", anos_disponiveis)
-#     df_ano = df_filt[df_filt['TEMPO'].dt.year == ano]
-
-#     mapa = df_ano.groupby('UF').size().reset_index(name='reclamacoes')
-
-#     gdf = gpd.read_file('datasets/brazil-states.geojson')
-
-#     # Merge para trazer as reclamações ao GeoDataFrame
-#     gdf = gdf.merge(mapa, left_on='sigla', right_on='UF', how='left').fillna(0)
-#     gdf['reclamacoes'] = gdf['reclamacoes'].astype(int)
-
-#     # Conversão para geojson dict
-#     geojson = gdf.__geo_interface__
-
-#     fig6 = px.choropleth(
-#         gdf,
-#         geojson=geojson,
-#         locations='sigla',
-#         featureidkey="properties.sigla",
-#         color='reclamacoes',
-#         hover_name='name',
-#         color_continuous_scale="Reds",
-#         labels={'reclamacoes':'Nº Reclamações'}
-#     )
-#     fig6.update_geos(fitbounds="locations", visible=False)
-#     st.plotly_chart(fig6)
-
-# else:
-#     st.write("Nenhum dado disponível para o mapa.")
-import json
-
+# Mapa do Brasil com Reclamações
 # Lista de siglas válidas (exemplo, carregue do geojson como já fez)
 siglas_validas = [
     "AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT",
@@ -151,58 +116,36 @@ df = df[df['UF'].isin(siglas_validas)]
 ufs_df = sorted(df['UF'].dropna().unique())
 st.write("Siglas no DataFrame (após limpeza robusta):", ufs_df)
 
-# Carrega GeoJSON como dict
+# --- Separação de MUNICIPIO e UF ---
+df[['MUNICIPIO', 'UF']] = df['LOCAL'].str.split('-', n=1, expand=True)
+df['MUNICIPIO'] = df['MUNICIPIO'].str.strip()
+df['UF'] = df['UF'].str.strip()
+
+# --- Lista de siglas válidas do GeoJSON ---
 with open('datasets/brazil-states.geojson', 'r') as f:
     geojson = json.load(f)
 
-# Extrai lista de siglas do GeoJSON
-ufs_geojson = sorted([f['properties']['sigla'] for f in geojson['features']])
+print(geojson['features'][0]['properties'].keys())
 
-# Limpa a coluna UF do DataFrame antes do debug
+ufs_geojson = [f['properties']['sigla'] for f in geojson['features']]
+
+# --- Filtragem para manter apenas UFs válidas ---
 df = df[df['UF'].isin(ufs_geojson)]
 
-# Extrai lista única de UFs do DataFrame (após limpeza)
-ufs_df = sorted(df['UF'].dropna().unique())
-
-# Exibe no Streamlit ou print em script
-st.write("Siglas no GeoJSON:", ufs_geojson)
-st.write("Siglas no DataFrame (após limpeza):", ufs_df)
-
-# Verifica diferença
-ufs_faltando = set(ufs_df) - set(ufs_geojson)
-st.write("Siglas no DF que NÃO estão no GeoJSON:", ufs_faltando)
-
-# Filtra df antes do agrupamento (como já fez acima)
-df_filt = df[df['UF'].isin(ufs_geojson)]
-
-# debug da coluna casos e reclamações
-df_mapa = df_filt[['UF', 'CASOS']].copy()
+# --- Agrupamento por UF usando a coluna CASOS ---
+# Se CASOS já contém a contagem correta
+df_mapa = df[['UF', 'CASOS']].copy()
 df_mapa = df_mapa.groupby('UF', as_index=False).sum()
 df_mapa.rename(columns={'CASOS': 'reclamacoes'}, inplace=True)
 
-st.write(df)
-st.write(df_mapa)
-
-import json
-import plotly.express as px
-
-# Carrega GeoJSON como dict
-with open('datasets/brazil-states.geojson', 'r') as f:
-    geojson = json.load(f)
-
-# Lista de siglas válidas do GeoJSON
-ufs_geojson = [f['properties']['sigla'] for f in geojson['features']]
-
-# Filtra o DataFrame df (já deve ter sido carregado antes) para UFs válidas
-df = df[df['UF'].isin(ufs_geojson)]
-
-# Remove vírgulas e converte para int
+# --- Conversão segura para int, removendo vírgulas se existirem ---
 df_mapa['reclamacoes'] = df_mapa['reclamacoes'].replace(',', '', regex=True).astype(int)
 
-# Exibe para debug final
+# --- Exibição do DataFrame para debug ---
+st.subheader("Debug - DataFrame df_mapa antes do mapa")
 st.dataframe(df_mapa)
 
-# Gera o mapa
+# --- Geração do mapa ---
 fig_mapa = px.choropleth(
     df_mapa,
     geojson=geojson,
@@ -213,7 +156,17 @@ fig_mapa = px.choropleth(
     color_continuous_scale="Reds",
     labels={'reclamacoes':'Nº Reclamações'}
 )
+fig_mapa.update_geos(
+    fitbounds="locations",
+    visible=True,
+    projection_type="mercator",
+    center=dict(lat=-14.2350, lon=-51.9253),  # Centro aproximado do Brasil
+    lataxis_range=[-35, 5],  # Latitude aproximada Brasil
+    lonaxis_range=[-75, -35]  # Longitude aproximada Brasil
+)
+
 fig_mapa.update_geos(fitbounds="locations", visible=True)
 
+# --- Exibição no Streamlit ---
 st.subheader("Mapa de Reclamações - Dados Reais")
 st.plotly_chart(fig_mapa, use_container_width=True)
