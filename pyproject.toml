@@ -33,8 +33,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/seu-usuario/DashboardsPython"
-Repository = "https://github.com/seu-usuario/DashboardsPython"
+Homepage = "https://github.com/igorrflorentino/DashboardsPython"
+Repository = "https://github.com/igorrflorentino/DashboardsPython"
 
 [build-system]
 requires = ["hatchling"]
