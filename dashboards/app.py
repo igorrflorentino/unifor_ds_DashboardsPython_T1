@@ -114,7 +114,6 @@ df = df[df['UF'].isin(siglas_validas)]
 
 # Debug pós-limpeza
 ufs_df = sorted(df['UF'].dropna().unique())
-st.write("Siglas no DataFrame (após limpeza robusta):", ufs_df)
 
 # --- Separação de MUNICIPIO e UF ---
 df[['MUNICIPIO', 'UF']] = df['LOCAL'].str.split('-', n=1, expand=True)
@@ -124,8 +123,6 @@ df['UF'] = df['UF'].str.strip()
 # --- Lista de siglas válidas do GeoJSON ---
 with open('datasets/brazil-states.geojson', 'r') as f:
     geojson = json.load(f)
-
-print(geojson['features'][0]['properties'].keys())
 
 ufs_geojson = [f['properties']['sigla'] for f in geojson['features']]
 
@@ -140,10 +137,6 @@ df_mapa.rename(columns={'CASOS': 'reclamacoes'}, inplace=True)
 
 # --- Conversão segura para int, removendo vírgulas se existirem ---
 df_mapa['reclamacoes'] = df_mapa['reclamacoes'].replace(',', '', regex=True).astype(int)
-
-# --- Exibição do DataFrame para debug ---
-st.subheader("Debug - DataFrame df_mapa antes do mapa")
-st.dataframe(df_mapa)
 
 # --- Geração do mapa ---
 fig_mapa = px.choropleth(
@@ -168,5 +161,5 @@ fig_mapa.update_geos(
 fig_mapa.update_geos(fitbounds="locations", visible=True)
 
 # --- Exibição no Streamlit ---
-st.subheader("Mapa de Reclamações - Dados Reais")
+st.subheader("Mapa de Reclamações - Por Estado")
 st.plotly_chart(fig_mapa, use_container_width=True)
